@@ -6,6 +6,9 @@ const compiled = require("../compile");
 //make a client connecting to the local eth network
 const web3 = new Web3(ganache.provider());
 
+const INITIAL_STRING = 'A distant Roman city';
+const MODIFIED_STRING = 'City is Capua.';
+
 let selectedAccount = ''
 let inbox; 
 beforeEach(async()=>{
@@ -14,25 +17,28 @@ beforeEach(async()=>{
     selectedAccount = accounts.at(0);
 
     //deploy the contract to one of them 
-    // inbox = await new web3.eth.Contract(JSON.parse(compiled.abi))
-    //     .deploy({data: compiled.evm.bytecode, arguments: ["Hello World!"]})
-    //     .send({from: selectedAccount, gas: '1000000'})
-
-    inbox = new web3.eth.Contract(compiled.abi, selectedAccount);
-
-   await inbox.methods.setMessage('New Message').send({ from: selectedAccount });
+    inbox = await new web3.eth.Contract(compiled.abi)
+        .deploy({ data: compiled.evm.bytecode.object, arguments: [INITIAL_STRING] })
+        .send({ from: accounts[0], gas: '1000000' });
 })
 
 it('can get an account', ()=>{
-    console.log("we do have a test (unlocked) account: ", selectedAccount);
-    assert.notEqual(selectedAccount, '');
+    assert.ok(selectedAccount);
 })
 
 
-it.only('can depploy a new inbox instance and set its message', async()=>{
+it('can depploy a new inbox instance', async()=>{
     assert.notEqual(inbox, null);
+    assert.ok(inbox.options.address);
+})
 
-    const message = await inbox.methods.message().send({ from: selectedAccount });
-    console.log('MESSAGE:', message);
+it('has a set default message', async()=>{
+    const message = await inbox.methods.message().call();
+    assert.equal(message, INITIAL_STRING);
+})
 
+it('can alter the default message', async()=>{
+    await inbox.methods.setMessage(MODIFIED_STRING).send({from: selectedAccount});
+    const message = await inbox.methods.message().call();
+    assert.equal(message, MODIFIED_STRING);
 })
